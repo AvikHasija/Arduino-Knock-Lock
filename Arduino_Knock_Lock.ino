@@ -3,10 +3,11 @@
 //pins for interrupts: 2, 3
 
 /*
-	POLLING: Ultrasonic 'Ping' sensor (DEFUNCT)
+	POLLING: Ultrasonic 'Ping' sensor
 		-in loop, trigger input pulse sent out by sensor
 		-get baseline reading of duration after first few run throughs
-		-keep polling for duration. When ~80cm from sensor, trigger sequence (LEDs)
+		-keep polling for duration
+		-When ~80cm from sensor (computation needed) trigger sequence (LEDs - make question mark)
 
 	INTERRPUT: Button
 		-When clicked, trigger ISR
@@ -26,13 +27,26 @@
 		-Output LED grid signifying waiting for input
 			-IF right, unlock with servo, smiley face output
 			-ELSE (wrong), sad face output
-		-(Lock door after a period of time? Think about this).
+		-(Lock door after a period of time (~8/10s)? Think about this).
 		
 		-If button is pressed, go into password change mode - TRIGGER ISR
 		ISR:
 			- turn on LED inside door to indicate pass change mode
-			- store timer value at each click (release?)
-			- 
+			- fetch timer value at each click (release? - pull down/up thing)
+			- subtract from previous value, store timer duration in array. Use this to match with array
+
+*/
+
+/*
+	INPUTS:
+		-Button inside door for changing pattern (Maybe two - one to trigger start, other to input. This way, can press trigger to stop input, rather than timing out).
+		-Force sensor
+		-PING sensor
+	OUTPUTS:
+		-LED grid
+			Patterns: Smile, sad face, quesion mark
+		-Servo motor
+			-Unlock, relock
 
 */
 
