@@ -66,10 +66,13 @@ void setup(){
 }
 
 void loop(){
+	//TODO: poll until measured value ~1/3 of initial (person walked up to door)
 	Serial.print("Initial data: ");
   	Serial.println(initialPulseDuration);
 	Serial.print("Measured now: ");
 	Serial.println(measurePulse());
+
+	//only read from force sensor if NOT polling ultrasonic; someone has to be at door for pattern to work
 }
 
 int measurePulse(){
@@ -91,14 +94,17 @@ int measurePulse(){
 	pinMode(pingSensorPin, INPUT);
 	currentPulseDuration = pulseIn(pingSensorPin, HIGH);
 
-	//Wait 1.5 seconds between each measurement to 
+	//Wait 1.5 seconds between each measurement to avoid error
 	delay(1500);
 
 	return currentPulseDuration;
 }
 
 int measureForce(){
-	
+	int currentForce;
+
+	currentForce = analogRead(forceSensorPin);
+	return currentForce;
 }
 
 void setupBaseData(){
@@ -108,4 +114,18 @@ void setupBaseData(){
 	}
 
 	//initialForce = measureForce();
+}
+
+//LED MATRIX METHODS
+
+void ledSmileyFace(){
+	
+}
+
+void ledSadFace(){
+	
+}
+
+void ledQuestionMark(){
+	
 }
