@@ -1,7 +1,4 @@
-//192 Security project 
-
-//pins for interrupts: 2, 3
-
+//PLANNING
 /*
 	POLLING: Ultrasonic 'Ping' sensor
 		-in loop, trigger input pulse sent out by sensor
@@ -47,6 +44,68 @@
 			Patterns: Smile, sad face, quesion mark
 		-Servo motor
 			-Unlock, relock
-
 */
 
+//START OF CODE LOL
+#include <Servo.h>
+
+Servo servo;
+
+int forceSensorPin = A0;
+int pingSensorPin = 8;
+
+int initialForce;
+int initialPulseDuration;
+
+void setup(){
+	Serial.begin(9600);
+
+	servo.attach(9);
+
+	setupBaseData();
+}
+
+void loop(){
+	Serial.print("Initial data: ");
+  	Serial.println(initialPulseDuration);
+	Serial.print("Measured now: ");
+	Serial.println(measurePulse());
+}
+
+int measurePulse(){
+	//declare function variable
+	int currentPulseDuration;
+
+	//initially, sensor needs to send output of 5 microseconds to send a pulse
+	pinMode(pingSensorPin, OUTPUT);
+	//low output first to ensure clean high with delay
+	digitalWrite(pingSensorPin, LOW);
+	delayMicroseconds(3);
+
+	//5 us high pulse to activate ping
+	digitalWrite(pingSensorPin, HIGH);
+	delayMicroseconds(5);
+	digitalWrite(pingSensorPin, LOW);
+
+	//change pin to input to recieve pulse
+	pinMode(pingSensorPin, INPUT);
+	currentPulseDuration = pulseIn(pingSensorPin, HIGH);
+
+	//Wait 1.5 seconds between each measurement to 
+	delay(1500);
+
+	return currentPulseDuration;
+}
+
+int measureForce(){
+	
+}
+
+void setupBaseData(){
+	//Use third data measurement as initial duration to negate any errors from the first few readings
+	for(int i = 0; i < 3; ++i){
+		initialPulseDuration = measurePulse();
+	}
+
+	//initialForce = measureForce();
+}
