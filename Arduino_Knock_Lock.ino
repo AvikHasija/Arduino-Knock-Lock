@@ -51,19 +51,23 @@
 
 Servo servo;
 
+//PINS
 const int forceSensorPin = A0;
 const int pingSensorPin = 8;
+
 const int knockDelayTime = 150; //time we delay before listening to another knock
-const int knockTimeout = 4000; //after 4 seconds, timeout and start again
+const int knockTimeout = 10000; //after 4 seconds, timeout and start again
 const int maxPatternSize = 10;
+const double knockAllowedError = 0.25;
 
 int initialForce;
 int initialPulseDuration;
 
 //STATE VARIABLES
-bool userPresent = false;
+bool userPresent = true;
 int prevKnockTime = 0;
 int currentKnockTime = 0;
+int lastEvent;
 int currentKnock = 0;
 int knockCode[maxPatternSize] = {0, 600, 600, 300, 300, 0, 0, 0, 0, 0};
 int readKnock[maxPatternSize] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -92,8 +96,10 @@ void loop(){
 }
 
 void readKnockPattern(){
-  int lastEvent = millis();
-    do{
+  lastEvent = millis();
+  Serial.print("WHAT");
+  Serial.println(millis()-lastEvent);
+    while((millis()-lastEvent < knockTimeout) && (currentKnock < maxPatternSize)) {
       if(measureForce() > 50){
         currentKnockTime = millis();
         Serial.print("Knock detected at: ");
@@ -107,10 +113,45 @@ void readKnockPattern(){
 
         prevKnockTime = currentKnockTime;
         currentKnock++;
+        delay(knockDelayTime);
       }
-    } while((millis()-lastEvent < knockTimeout) && (currentKnock < maxPatternSize));
+    }
 
-    //NOW: compare with existing pattern (ANOTHER FUNCTION)
+    Serial.println("Knock pattern inputted. Checking against password.");
+    Serial.print("PATTERN CHECK: ");
+    Serial.println(checkPattern());
+
+    //TODO: Reset variables
+}
+
+boolean checkPattern(){
+  int enteredKnocks = 0;
+  int passwordKnocks = 0;
+  int enteredTimes = 0;
+  int passwordTimes = 0;
+
+  for(int i = 0; i<maxPatternSize; ++i){
+    if(readKnock[i] != 0){
+      enteredKnocks++;
+    }
+    if(knockCode[i] != 0){
+      passwordKnocks++;
+    }
+    enteredTimes += readKnock[i];
+    passwordTimes += knockCode[i];
+  }
+
+  double allowedLowerBound = (double) (passwordTimes - (passwordTimes*knockAllowedError));
+  double allowedUpperBound = (double) (passwordTimes + (passwordTimes*knockAllowedError));
+
+  if(enteredKnocks != passwordKnocks){
+    return false;
+  } else if ((enteredTimes >= allowedLowerBound) && (enteredTimes <= allowedUpperBound)){
+    //within the set range
+    return true;
+  } else{
+    return false;
+  }
 }
 
 int measurePulse(){
