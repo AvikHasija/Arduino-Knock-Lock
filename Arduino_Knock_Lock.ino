@@ -51,28 +51,41 @@
 
 Servo servo;
 
-int forceSensorPin = A0;
-int pingSensorPin = 8;
+const int forceSensorPin = A0;
+const int pingSensorPin = 8;
+const int knockDelayTime = 150; //time we delay before listening to another knock
+const int knockTimeout = 4000; //after 4 seconds, timeout and start again
 
 int initialForce;
 int initialPulseDuration;
 
+//STATE VARIABLES
+bool userPresent = false;
+int prevTime = 0;
+int currentTime = 0;
+int knockCode[10] = [600, 600, 300, 300, 0, 0, 0, 0, 0, 0];
+int readKnock[10] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+
 void setup(){
 	Serial.begin(9600);
-
 	servo.attach(9);
-
 	setupBaseData();
 }
 
 void loop(){
+	
+	while(!userPresent){
+		Serial.println(measurePulse());
+	}
+	
 	//TODO: poll until measured value ~1/3 of initial (person walked up to door)
-	Serial.print("Initial data: ");
-  	Serial.println(initialPulseDuration);
-	Serial.print("Measured now: ");
-	Serial.println(measurePulse());
-
 	//only read from force sensor if NOT polling ultrasonic; someone has to be at door for pattern to work
+
+	if(userPresent){
+		do{
+      //MEASURE FORCE
+		} while()
+	}
 }
 
 int measurePulse(){
@@ -114,6 +127,16 @@ void setupBaseData(){
 	}
 
 	//initialForce = measureForce();
+}
+
+void unlockDoor(){
+	//Use servo to unlock door
+	//servo.writeMicroseconds(NUMBER);
+}
+
+void lockDoor(){
+	//Use servo to lock door
+	//servo.writeMicroseconds(NUMBER);	
 }
 
 //LED MATRIX METHODS
