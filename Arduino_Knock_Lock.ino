@@ -55,16 +55,18 @@ const int forceSensorPin = A0;
 const int pingSensorPin = 8;
 const int knockDelayTime = 150; //time we delay before listening to another knock
 const int knockTimeout = 4000; //after 4 seconds, timeout and start again
+const int maxPatternSize = 10;
 
 int initialForce;
 int initialPulseDuration;
 
 //STATE VARIABLES
 bool userPresent = false;
-int prevTime = 0;
-int currentTime = 0;
-int knockCode[10] = [600, 600, 300, 300, 0, 0, 0, 0, 0, 0];
-int readKnock[10] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+int prevKnockTime = 0;
+int currentKnockTime = 0;
+int currentKnock = 0;
+int knockCode[maxPatternSize] = {0, 600, 600, 300, 300, 0, 0, 0, 0, 0};
+int readKnock[maxPatternSize] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 void setup(){
 	Serial.begin(9600);
@@ -82,10 +84,33 @@ void loop(){
 	//only read from force sensor if NOT polling ultrasonic; someone has to be at door for pattern to work
 
 	if(userPresent){
-		do{
-      //MEASURE FORCE
-		} while()
+    for(int i = 0; i<maxPatternSize; ++i){
+      readKnock[i] = 0; //Clear array
+    }
+    readKnockPattern();
 	}
+}
+
+void readKnockPattern(){
+  int lastEvent = millis();
+    do{
+      if(measureForce() > 50){
+        currentKnockTime = millis();
+        Serial.print("Knock detected at: ");
+        Serial.println(currentKnockTime);
+
+        if(currentKnock == 0){
+          readKnock[currentKnock] = 0;
+        } else {
+          readKnock[currentKnock] = (currentKnockTime - prevKnockTime);
+        }
+
+        prevKnockTime = currentKnockTime;
+        currentKnock++;
+      }
+    } while((millis()-lastEvent < knockTimeout) && (currentKnock < maxPatternSize));
+
+    //NOW: compare with existing pattern (ANOTHER FUNCTION)
 }
 
 int measurePulse(){
