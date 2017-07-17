@@ -1,4 +1,3 @@
-//PLANNING
 /*
 	POLLING: Ultrasonic 'Ping' sensor
 		-in loop, trigger input pulse sent out by sensor
@@ -54,7 +53,9 @@ unsigned long custom_millis = 0;
 
 //PINS
 const int forceSensorPin = A0;
-const int pingSensorPin = 8;
+const int pingSensorPin = 6;
+const int interruptButton = 2; //white
+const int patternButton = 3; //red
 const int LEDMatrixOutputOne = 9;
 const int LEDMatrixOutputTwo = 11;
 const int LEDMatrixOutputThree = 13;
@@ -68,20 +69,21 @@ const int knockTimeout = 10000; //after 4 seconds, timeout and start again
 const int maxPatternSize = 10;
 const double knockAllowedError = 0.25;
 
-int initialPulseDuration;
+int initialPulseDistance;
 
-//STATE VARIABLES
-bool userPresent = true;
+bool userPresent = false;
+bool setPattern = false; //True when triggered in ISR - can set pattern
+int currentPulseDistance;
 int prevKnockTime = 0;
 int currentKnockTime = 0;
-int lastEvent;
+int lastEvent = 0;
 int currentKnock = 0;
 int knockCode[maxPatternSize] = {0, 600, 600, 300, 300, 0, 0, 0, 0, 0};
 int readKnock[maxPatternSize] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 void setup(){
 	Serial.begin(9600);
-	servo.attach(9);
+	servo.attach(5);
   
   pinMode(LEDMatrixOutputOne, OUTPUT);
   pinMode(LEDMatrixOutputTwo, OUTPUT);
@@ -99,23 +101,21 @@ void setup(){
   TIMSK2 |= (7 << 0); //Enabling bit 0 (TOIE2) of timer 2 (TIMSK2) enables overflow interrupts
   OCR2B = 249; //Timer 2 will overflow when it reaches 249 (250 clock cycles), and triggers the ISR. This is exactly 1ms.
 
-	setupBaseData();
+	setupBaseDistance();
 }
 
 void loop(){
 	
-	while(!userPresent){
-		Serial.println(measurePulse());
+	while(!userPresent){ //poll until user is present
+    currentPulseDistance = measurePulse();
+    if((double)currentPulseDistance <= (double) (initialPulseDistance * 0.3)){
+      userPresent = true;
+    }
 	}
-	
-	//TODO: poll until measured value ~1/3 of initial (person walked up to door)
-	//only read from force sensor if NOT polling ultrasonic; someone has to be at door for pattern to work
 
 	if(userPresent){
-    for(int i = 0; i<maxPatternSize; ++i){
-      readKnock[i] = 0; //Clear array
-    }
-    readKnockPattern();
+    Serial.println("User detected!");
+    readKnockPattern(); //read pattern in
 	}
 }
 
@@ -125,12 +125,12 @@ ISR(TIMER2_COMPB_vect){
 }
 
 void readKnockPattern(){
-  lastEvent = custom_millis;
-  Serial.print("WHAT");
-  Serial.println(custom_millis-lastEvent);
+    lastEvent = custom_millis;
+    ledDots(); //turn on led dots while waiting for pattern input
     while((custom_millis-lastEvent < knockTimeout) && (currentKnock < maxPatternSize)) {
       if(measureForce() > 50){
         currentKnockTime = custom_millis;
+        lastEvent = currentKnockTime; //reset variable for last event 
         Serial.print("Knock detected at: ");
         Serial.println(currentKnockTime);
 
@@ -146,11 +146,27 @@ void readKnockPattern(){
       }
     }
 
-    Serial.println("Knock pattern inputted. Checking against password.");
-    Serial.print("PATTERN CHECK: ");
-    Serial.println(checkPattern());
+    if(readKnock[1] != 0){ //if second value in array isnt 0, we know the user has entered at least two knocks
+      Serial.println("Knock pattern inputted. Checking against password.");
+      Serial.print("PATTERN CHECK: ");
+      Serial.println(checkPattern());
+    } else {
+      Serial.println("Timed out! No knocks detected.");
+    }
+   
+    resetKnockVariables();
+}
 
-    //TODO: Reset variables
+void resetKnockVariables(){
+  Serial.println("Resetting variables");
+  userPresent = false;
+  lastEvent = 0;
+  currentKnockTime = 0;
+  currentKnock = 0;
+
+  for(int i = 0; i<maxPatternSize; ++i){
+      readKnock[i] = 0; //Clear input array
+    }
 }
 
 boolean checkPattern(){
@@ -202,6 +218,9 @@ int measurePulse(){
 	pinMode(pingSensorPin, INPUT);
 	currentPulseDuration = pulseIn(pingSensorPin, HIGH);
 
+  Serial.print("Polling for distance: ");
+  Serial.println(currentPulseDuration);
+
 	//Wait 1.5 seconds between each measurement to avoid error
 	delay(1500);
 
@@ -215,13 +234,14 @@ int measureForce(){
 	return currentForce;
 }
 
-void setupBaseData(){
+void setupBaseDistance(){
 	//Use third data measurement as initial duration to negate any errors from the first few readings
 	for(int i = 0; i < 3; ++i){
-		initialPulseDuration = measurePulse();
+		initialPulseDistance = measurePulse();
 	}
-
-	//initialForce = measureForce();
+    Serial.print("The intial measured distance is: ");
+    Serial.print(initialPulseDistance);
+    Serial.println(". We will assume someone has approached the door when the distance is ~1/3 this value");
 }
 
 void unlockDoor(){
@@ -237,7 +257,8 @@ void lockDoor(){
 
 //LED MATRIX METHODS
 void ledSmileyFace(){
-	digitalWrite(LEDMatrixInputTwo, HIGH );
+  while (true){
+	  digitalWrite(LEDMatrixInputTwo, HIGH );
     digitalWrite(LEDMatrixOutputOne, LOW );
     digitalWrite(LEDMatrixInputTwo, LOW );
     digitalWrite(LEDMatrixOutputOne, HIGH );
@@ -266,9 +287,11 @@ void ledSmileyFace(){
     digitalWrite(LEDMatrixOutputThree, LOW );
     digitalWrite(LEDMatrixInputThree, LOW );
     digitalWrite(LEDMatrixOutputThree, HIGH);
+  }
 }
 
 void ledSadFace(){
+  while(true){
     digitalWrite(LEDMatrixInputTwo, HIGH );
     digitalWrite(LEDMatrixOutputOne, LOW );
     digitalWrite(LEDMatrixInputTwo, LOW );
@@ -298,9 +321,10 @@ void ledSadFace(){
     digitalWrite(LEDMatrixOutputTwo, LOW );
     digitalWrite(LEDMatrixInputThree, LOW );
     digitalWrite(LEDMatrixOutputTwo, HIGH);
+  }
 }
 
-void ledQuestionMark(){
+void ledDots(){
 	  digitalWrite(LEDMatrixInputOne, HIGH );
     digitalWrite(LEDMatrixOutputTwo, LOW );
     delay (500);
@@ -325,3 +349,12 @@ void ledQuestionMark(){
     digitalWrite(LEDMatrixInputFour, LOW );
     digitalWrite(LEDMatrixOutputTwo, HIGH );
 }
+
+void turnLedMatrixOff(){
+  digitalWrite(LEDMatrixInputOne, LOW);
+  digitalWrite(LEDMatrixInputTwo, LOW);
+  digitalWrite(LEDMatrixInputThree, LOW);
+  digitalWrite(LEDMatrixInputFour, LOW);
+}
+
+
