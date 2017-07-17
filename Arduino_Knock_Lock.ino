@@ -45,7 +45,7 @@
 			-Unlock, relock
 */
 
-//START OF CODE LOL
+//START OF CODE
 #include <Servo.h>
 
 Servo servo;
