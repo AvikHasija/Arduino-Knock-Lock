@@ -73,10 +73,10 @@ int initialPulseDistance;
 
 bool userPresent = false;
 bool setPattern = false; //True when triggered in ISR - can set pattern
-int currentPulseDistance;
+int currentPulseDistance = 0;
 int prevKnockTime = 0;
 int currentKnockTime = 0;
-int lastEvent = 0;
+int knockStartTime = 0;
 int currentKnock = 0;
 int knockCode[maxPatternSize] = {0, 600, 600, 300, 300, 0, 0, 0, 0, 0};
 int readKnock[maxPatternSize] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -115,7 +115,7 @@ void loop(){
 
 	if(userPresent){
     Serial.println("User detected!");
-    readKnockPattern(); //read pattern in
+    readKnockPattern(custom_millis); //read pattern in, sending current time as start time
 	}
 }
 
@@ -124,13 +124,14 @@ ISR(TIMER2_COMPB_vect){
   TCNT2 = 0; //reset timer, so it starts again from 0 (count from 0-249 again)
 }
 
-void readKnockPattern(){
-    lastEvent = custom_millis;
+void readKnockPattern(long startTime){ //startTime used to determine how long to wait before time out.
+    Serial.print("Starting knock timer at: ");
+    Serial.println(startTime);
+    Serial.println(custom_millis);
     ledDots(); //turn on led dots while waiting for pattern input
-    while((custom_millis-lastEvent < knockTimeout) && (currentKnock < maxPatternSize)) {
+    while((custom_millis-startTime < knockTimeout) && (currentKnock < maxPatternSize)) {
       if(measureForce() > 50){
         currentKnockTime = custom_millis;
-        lastEvent = currentKnockTime; //reset variable for last event 
         Serial.print("Knock detected at: ");
         Serial.println(currentKnockTime);
 
@@ -160,7 +161,7 @@ void readKnockPattern(){
 void resetKnockVariables(){
   Serial.println("Resetting variables");
   userPresent = false;
-  lastEvent = 0;
+  knockStartTime = 0;
   currentKnockTime = 0;
   currentKnock = 0;
 
