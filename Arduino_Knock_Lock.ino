@@ -74,9 +74,8 @@ int initialPulseDistance;
 bool userPresent = false;
 bool setPattern = false; //True when triggered in ISR - can set pattern
 int currentPulseDistance = 0;
-int prevKnockTime = 0;
-int currentKnockTime = 0;
-int knockStartTime = 0;
+unsigned long prevKnockTime = 0;
+unsigned long currentKnockTime = 0;
 int currentKnock = 0;
 int knockCode[maxPatternSize] = {0, 600, 600, 300, 300, 0, 0, 0, 0, 0};
 int readKnock[maxPatternSize] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
@@ -97,7 +96,7 @@ void setup(){
 
   //TIMER SETUP
   TCCR2A = 0;
-  TCCR2B = ( _BV(CS22)); //prescale is clk/64 --> 16MHz / 64 = 250kHz hz
+  TCCR2B = (_BV(CS22)); //prescale is clk/64 --> 16MHz / 64 = 250kHz hz
   TIMSK2 |= (7 << 0); //Enabling bit 0 (TOIE2) of timer 2 (TIMSK2) enables overflow interrupts
   OCR2B = 249; //Timer 2 will overflow when it reaches 249 (250 clock cycles), and triggers the ISR. This is exactly 1ms.
 
@@ -124,7 +123,7 @@ ISR(TIMER2_COMPB_vect){
   TCNT2 = 0; //reset timer, so it starts again from 0 (count from 0-249 again)
 }
 
-void readKnockPattern(long startTime){ //startTime used to determine how long to wait before time out.
+void readKnockPattern(unsigned long startTime){ //startTime used to determine how long to wait before time out.
     Serial.print("Starting knock timer at: ");
     Serial.println(startTime);
     Serial.println(custom_millis);
@@ -161,7 +160,6 @@ void readKnockPattern(long startTime){ //startTime used to determine how long to
 void resetKnockVariables(){
   Serial.println("Resetting variables");
   userPresent = false;
-  knockStartTime = 0;
   currentKnockTime = 0;
   currentKnock = 0;
 
