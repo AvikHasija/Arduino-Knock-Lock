@@ -118,12 +118,12 @@ void loop(){
     if((double)currentPulseDistance <= (double) (initialPulseDistance * 0.3)){
       userPresent = true;
     }
-    Serial.print("Knock code is: ")
+    Serial.print("Knock code is: ");
     for(int i=0; i<maxPatternSize; ++i){
       Serial.print(knockCode[i]);
       Serial.print(" ");
     }
-    Serial.println(".");
+    Serial.println("");
 	}
 
 	if(userPresent && !setPattern){
@@ -135,7 +135,7 @@ void loop(){
   Serial.println("Set Pattern");
     if(digitalRead(patternButton) == HIGH){
         currentKnockTime = custom_millis;
-        Serial.print("Knock detected at: ");
+        Serial.print("Input detected at: ");
         Serial.println(currentKnockTime);
 
         if(currentKnock == 0){
@@ -167,8 +167,12 @@ void loop(){
         //ALSO: clear temp knock code array
         tempKnockCode[i] = 0;
       }
-  }
+    }
+
+    //reset all variables used to set pattern
+    resetKnockVariables();
  }
+ 
 }
 
 ISR(TIMER2_COMPB_vect){
@@ -205,8 +209,19 @@ void readKnockPattern(unsigned long startTime){ //startTime used to determine ho
 
     if(readKnock[1] != 0){ //if second value in array isnt 0, we know the user has entered at least two knocks
       Serial.println("Knock pattern inputted. Checking against password.");
-      Serial.print("PATTERN CHECK: ");
-      Serial.println(checkPattern());
+
+      if(checkPattern()){
+        Serial.println("Correct pattern! :)");
+        ledSmileyFace(1000, custom_millis); //happy face for one second
+        
+        unlockDoor();
+        delay(5000); //keep door unlocked for 5s, then lock again for security
+        lockDoor();
+        
+      } else { //wrong pattern
+        Serial.println("Incorrect pattern :(");
+        ledSadFace(1000, custom_millis); //sad face for one second
+      }
     } else {
       Serial.println("Timed out! No knocks detected.");
     }
@@ -302,18 +317,19 @@ void setupBaseDistance(){
 
 void unlockDoor(){
 	//Use servo to unlock door
-	//servo.writeMicroseconds(NUMBER);
+	servo.writeMicroseconds(2300);
 }
 
 void lockDoor(){
 	//Use servo to lock door
-	//servo.writeMicroseconds(NUMBER);	
+	servo.writeMicroseconds(0);	
 }
 
 
 //LED MATRIX METHODS
-void ledSmileyFace(){
-  while (true){
+void ledSmileyFace(unsigned long duration, unsigned long startTime){
+  Serial.println(startTime);
+  while (custom_millis-startTime < duration){
 	  digitalWrite(LEDMatrixInputTwo, HIGH );
     digitalWrite(LEDMatrixOutputOne, LOW );
     digitalWrite(LEDMatrixInputTwo, LOW );
@@ -346,8 +362,8 @@ void ledSmileyFace(){
   }
 }
 
-void ledSadFace(){
-  while(true){
+void ledSadFace(unsigned long duration, unsigned long startTime){
+  while(custom_millis-startTime < duration){
     digitalWrite(LEDMatrixInputTwo, HIGH );
     digitalWrite(LEDMatrixOutputOne, LOW );
     digitalWrite(LEDMatrixInputTwo, LOW );
@@ -406,11 +422,15 @@ void ledDots(){
     digitalWrite(LEDMatrixOutputTwo, HIGH );
 }
 
-void turnLedMatrixOff(){
+void turnLedMatrixOff() {
   digitalWrite(LEDMatrixInputOne, LOW);
   digitalWrite(LEDMatrixInputTwo, LOW);
   digitalWrite(LEDMatrixInputThree, LOW);
   digitalWrite(LEDMatrixInputFour, LOW);
+
+  digitalWrite(LEDMatrixOutputOne, LOW);
+  digitalWrite(LEDMatrixOutputTwo, LOW);
+  digitalWrite(LEDMatrixOutputThree, LOW);
 }
 
 
