@@ -54,8 +54,10 @@ unsigned long custom_millis = 0;
 //PINS
 const int forceSensorPin = A0;
 const int pingSensorPin = 6;
+const int patternSetVerifyLED = 0;
 const int interruptButton = 2; //white
 const int patternButton = 3; //red
+
 const int LEDMatrixOutputOne = 9;
 const int LEDMatrixOutputTwo = 11;
 const int LEDMatrixOutputThree = 13;
@@ -65,7 +67,7 @@ const int LEDMatrixInputThree = 12;
 const int LEDMatrixInputFour = 8;
 
 const int knockDelayTime = 150; //time we delay before listening to another knock
-const int knockTimeout = 10000; //after 4 seconds, timeout and start again
+const int knockTimeout = 8000; //after 8 seconds, timeout and start again
 const int maxPatternSize = 10;
 const double knockAllowedError = 0.25;
 
@@ -73,22 +75,28 @@ int initialPulseDistance;
 
 bool userPresent = false;
 bool setPattern = false; //True when triggered in ISR - can set pattern
+bool savePattern = true; //always opposite to setPattern
 int currentPulseDistance = 0;
 unsigned long prevKnockTime = 0;
 unsigned long currentKnockTime = 0;
 int currentKnock = 0;
 int knockCode[maxPatternSize] = {0, 600, 600, 300, 300, 0, 0, 0, 0, 0};
+int tempKnockCode[maxPatternSize] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 int readKnock[maxPatternSize] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 
 void setup(){
 	Serial.begin(9600);
 	servo.attach(5);
+
+  pinMode(forceSensorPin, INPUT);
+  pinMode(interruptButton, INPUT);
+  attachInterrupt(digitalPinToInterrupt(interruptButton), patternState, RISING);
+  pinMode(patternButton, INPUT);
+  pinMode(patternSetVerifyLED, OUTPUT);
   
   pinMode(LEDMatrixOutputOne, OUTPUT);
   pinMode(LEDMatrixOutputTwo, OUTPUT);
   pinMode(LEDMatrixOutputThree, OUTPUT);
-
-  pinMode(forceSensorPin, INPUT);
   pinMode(LEDMatrixInputOne, INPUT);
   pinMode(LEDMatrixInputTwo, INPUT);
   pinMode(LEDMatrixInputThree, INPUT);
@@ -105,17 +113,62 @@ void setup(){
 
 void loop(){
 	
-	while(!userPresent){ //poll until user is present
+	while(!userPresent && !setPattern){ //poll until user is present
     currentPulseDistance = measurePulse();
     if((double)currentPulseDistance <= (double) (initialPulseDistance * 0.3)){
       userPresent = true;
     }
+    Serial.print("Knock code is: ")
+    for(int i=0; i<maxPatternSize; ++i){
+      Serial.print(knockCode[i]);
+      Serial.print(" ");
+    }
+    Serial.println(".");
 	}
 
-	if(userPresent){
+	if(userPresent && !setPattern){
     Serial.println("User detected!");
     readKnockPattern(custom_millis); //read pattern in, sending current time as start time
 	}
+
+ if(setPattern){
+  Serial.println("Set Pattern");
+    if(digitalRead(patternButton) == HIGH){
+        currentKnockTime = custom_millis;
+        Serial.print("Knock detected at: ");
+        Serial.println(currentKnockTime);
+
+        if(currentKnock == 0){
+          tempKnockCode[currentKnock] = 0;
+        } else {
+          tempKnockCode[currentKnock] = (currentKnockTime - prevKnockTime);
+        }
+
+        prevKnockTime = currentKnockTime;
+        currentKnock++;
+        delay(knockDelayTime);
+    }
+ }
+
+ if(savePattern){
+    if(tempKnockCode[1] !=0){ //User has entered code
+      Serial.println("Saving Pattern");
+      
+      //Replace existing code with newly entered code and print code to LED to give feedback to user
+      for(int i = 0; i < maxPatternSize; ++i){
+        knockCode[i] = tempKnockCode[i]; //replace saved value with temp value
+      
+        if(i != 1 && knockCode[i] !=0){
+          digitalWrite(patternSetVerifyLED, HIGH);
+        }
+
+        delay(knockCode[i]);
+
+        //ALSO: clear temp knock code array
+        tempKnockCode[i] = 0;
+      }
+  }
+ }
 }
 
 ISR(TIMER2_COMPB_vect){
@@ -123,10 +176,14 @@ ISR(TIMER2_COMPB_vect){
   TCNT2 = 0; //reset timer, so it starts again from 0 (count from 0-249 again)
 }
 
+void patternState(){
+  setPattern = !setPattern;
+  savePattern = !savePattern;
+}
+
 void readKnockPattern(unsigned long startTime){ //startTime used to determine how long to wait before time out.
     Serial.print("Starting knock timer at: ");
     Serial.println(startTime);
-    Serial.println(custom_millis);
     ledDots(); //turn on led dots while waiting for pattern input
     while((custom_millis-startTime < knockTimeout) && (currentKnock < maxPatternSize)) {
       if(measureForce() > 50){
