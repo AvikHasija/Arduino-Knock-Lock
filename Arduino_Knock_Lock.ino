@@ -50,6 +50,7 @@
 #include <Servo.h>
 
 Servo servo;
+unsigned long custom_millis = 0;
 
 //PINS
 const int forceSensorPin = A0;
@@ -67,7 +68,6 @@ const int knockTimeout = 10000; //after 4 seconds, timeout and start again
 const int maxPatternSize = 10;
 const double knockAllowedError = 0.25;
 
-int initialForce;
 int initialPulseDuration;
 
 //STATE VARIABLES
@@ -93,6 +93,12 @@ void setup(){
   pinMode(LEDMatrixInputThree, INPUT);
   pinMode(LEDMatrixInputFour, INPUT);
 
+  //TIMER SETUP
+  TCCR2A = 0;
+  TCCR2B = ( _BV(CS22)); //prescale is clk/64 --> 16MHz / 64 = 250kHz hz
+  TIMSK2 |= (7 << 0); //Enabling bit 0 (TOIE2) of timer 2 (TIMSK2) enables overflow interrupts
+  OCR2B = 249; //Timer 2 will overflow when it reaches 249 (250 clock cycles), and triggers the ISR. This is exactly 1ms.
+
 	setupBaseData();
 }
 
@@ -113,13 +119,18 @@ void loop(){
 	}
 }
 
+ISR(TIMER2_COMPB_vect){
+  custom_millis++; //increment millis variable, as 1ms has passed
+  TCNT2 = 0; //reset timer, so it starts again from 0 (count from 0-249 again)
+}
+
 void readKnockPattern(){
-  lastEvent = millis();
+  lastEvent = custom_millis;
   Serial.print("WHAT");
-  Serial.println(millis()-lastEvent);
-    while((millis()-lastEvent < knockTimeout) && (currentKnock < maxPatternSize)) {
+  Serial.println(custom_millis-lastEvent);
+    while((custom_millis-lastEvent < knockTimeout) && (currentKnock < maxPatternSize)) {
       if(measureForce() > 50){
-        currentKnockTime = millis();
+        currentKnockTime = custom_millis;
         Serial.print("Knock detected at: ");
         Serial.println(currentKnockTime);
 
