@@ -54,6 +54,13 @@ Servo servo;
 //PINS
 const int forceSensorPin = A0;
 const int pingSensorPin = 8;
+const int LEDMatrixOutputOne = 9;
+const int LEDMatrixOutputTwo = 11;
+const int LEDMatrixOutputThree = 13;
+const int LEDMatrixInputOne = 7;
+const int LEDMatrixInputTwo = 10;
+const int LEDMatrixInputThree = 12;
+const int LEDMatrixInputFour = 8;
 
 const int knockDelayTime = 150; //time we delay before listening to another knock
 const int knockTimeout = 10000; //after 4 seconds, timeout and start again
@@ -75,6 +82,17 @@ int readKnock[maxPatternSize] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 void setup(){
 	Serial.begin(9600);
 	servo.attach(9);
+  
+  pinMode(LEDMatrixOutputOne, OUTPUT);
+  pinMode(LEDMatrixOutputTwo, OUTPUT);
+  pinMode(LEDMatrixOutputThree, OUTPUT);
+
+  pinMode(forceSensorPin, INPUT);
+  pinMode(LEDMatrixInputOne, INPUT);
+  pinMode(LEDMatrixInputTwo, INPUT);
+  pinMode(LEDMatrixInputThree, INPUT);
+  pinMode(LEDMatrixInputFour, INPUT);
+
 	setupBaseData();
 }
 
@@ -205,16 +223,94 @@ void lockDoor(){
 	//servo.writeMicroseconds(NUMBER);	
 }
 
-//LED MATRIX METHODS
 
+//LED MATRIX METHODS
 void ledSmileyFace(){
-	
+	digitalWrite(LEDMatrixInputTwo, HIGH );
+    digitalWrite(LEDMatrixOutputOne, LOW );
+    digitalWrite(LEDMatrixInputTwo, LOW );
+    digitalWrite(LEDMatrixOutputOne, HIGH );
+  
+    digitalWrite(LEDMatrixInputThree, HIGH );
+    digitalWrite(LEDMatrixOutputOne, LOW );
+    digitalWrite(LEDMatrixInputThree, LOW );
+    digitalWrite(LEDMatrixOutputOne, HIGH );
+  
+    digitalWrite(LEDMatrixInputOne, HIGH );
+    digitalWrite(LEDMatrixOutputTwo, LOW );
+    digitalWrite(LEDMatrixInputOne, LOW );
+    digitalWrite(LEDMatrixOutputTwo, HIGH);
+  
+    digitalWrite(LEDMatrixInputFour, HIGH );
+    digitalWrite(LEDMatrixOutputTwo, LOW );
+    digitalWrite(LEDMatrixInputFour, LOW );
+    digitalWrite(LEDMatrixOutputTwo, HIGH);
+  
+    digitalWrite(LEDMatrixInputTwo, HIGH );
+    digitalWrite(LEDMatrixOutputThree, LOW );
+    digitalWrite(LEDMatrixInputTwo, LOW );
+    digitalWrite(LEDMatrixOutputThree, HIGH);
+  
+    digitalWrite(LEDMatrixInputThree, HIGH );
+    digitalWrite(LEDMatrixOutputThree, LOW );
+    digitalWrite(LEDMatrixInputThree, LOW );
+    digitalWrite(LEDMatrixOutputThree, HIGH);
 }
 
 void ledSadFace(){
-	
+    digitalWrite(LEDMatrixInputTwo, HIGH );
+    digitalWrite(LEDMatrixOutputOne, LOW );
+    digitalWrite(LEDMatrixInputTwo, LOW );
+    digitalWrite(LEDMatrixOutputOne, HIGH );
+  
+    digitalWrite(LEDMatrixInputThree, HIGH );
+    digitalWrite(LEDMatrixOutputOne, LOW );
+    digitalWrite(LEDMatrixInputThree, LOW );
+    digitalWrite(LEDMatrixOutputOne, HIGH );
+  
+    digitalWrite(LEDMatrixInputOne, HIGH );
+    digitalWrite(LEDMatrixOutputThree, LOW );
+    digitalWrite(LEDMatrixInputOne, LOW );
+    digitalWrite(LEDMatrixOutputThree, HIGH);
+  
+    digitalWrite(LEDMatrixInputFour, HIGH );
+    digitalWrite(LEDMatrixOutputThree, LOW );
+    digitalWrite(LEDMatrixInputFour, LOW );
+    digitalWrite(LEDMatrixOutputThree, HIGH);
+  
+    digitalWrite(LEDMatrixInputTwo, HIGH );
+    digitalWrite(LEDMatrixOutputTwo, LOW );
+    digitalWrite(LEDMatrixInputTwo, LOW );
+    digitalWrite(LEDMatrixOutputTwo, HIGH);
+  
+    digitalWrite(LEDMatrixInputThree, HIGH );
+    digitalWrite(LEDMatrixOutputTwo, LOW );
+    digitalWrite(LEDMatrixInputThree, LOW );
+    digitalWrite(LEDMatrixOutputTwo, HIGH);
 }
 
 void ledQuestionMark(){
-	
+	  digitalWrite(LEDMatrixInputOne, HIGH );
+    digitalWrite(LEDMatrixOutputTwo, LOW );
+    delay (500);
+    digitalWrite(LEDMatrixInputOne, LOW );
+    digitalWrite(LEDMatrixOutputTwo, HIGH );
+
+    digitalWrite(LEDMatrixInputTwo, HIGH );
+    digitalWrite(LEDMatrixOutputTwo, LOW );
+    delay (500);
+    digitalWrite(LEDMatrixInputTwo, LOW );
+    digitalWrite(LEDMatrixOutputTwo, HIGH );
+
+    digitalWrite(LEDMatrixInputThree, HIGH );
+    digitalWrite(LEDMatrixOutputTwo, LOW );
+    delay (500);
+    digitalWrite(LEDMatrixInputThree, LOW );
+    digitalWrite(LEDMatrixOutputTwo, HIGH );
+
+    digitalWrite(LEDMatrixInputFour, HIGH );
+    digitalWrite(LEDMatrixOutputTwo, LOW );
+    delay (500);
+    digitalWrite(LEDMatrixInputFour, LOW );
+    digitalWrite(LEDMatrixOutputTwo, HIGH );
 }
