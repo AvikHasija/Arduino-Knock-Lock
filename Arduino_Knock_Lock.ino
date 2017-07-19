@@ -1,51 +1,3 @@
-/*
-	POLLING: Ultrasonic 'Ping' sensor
-		-in loop, trigger input pulse sent out by sensor
-		-get baseline reading of duration after first few run throughs
-		-keep polling for duration
-		-When ~80cm from sensor (computation needed) trigger sequence (LEDs - make question mark)
-
-	INTERRPUT: Button
-		-When clicked, trigger ISR
-		-output command to change knock pattern
-		-store time b/w each click (knock) in array
-		-find some way to exit (leave for 3 seconds? use timer to achieve this)
-		-give feedback to user (print pattern with beeps?)
-
-*/
-
-/*
-	General Program Flow:
-		-Start polling ultrasonic sensor
-		-Wait until object is substantially closer to sensor (>50% of distance)
-			-Stop polling for distance (bool inRange = true or something)
-
-		-Output LED grid signifying waiting for input
-			-IF right, unlock with servo, smiley face output
-			-ELSE (wrong), sad face output
-		-(Lock door after a period of time (~8/10s)? Think about this).
-		
-		-If button is pressed, go into password change mode - TRIGGER ISR
-		ISR:
-			- turn on LED inside door to indicate pass change mode
-			- fetch timer value at each click (release? - pull down/up thing)
-			- subtract from previous value, store timer duration in array. Use this to match with array
-
-*/
-
-/*
-	INPUTS:
-		-Button inside door for changing pattern (Maybe two - one to trigger start, other to input. This way, can press trigger to stop input, rather than timing out).
-		-Force sensor
-		-PING sensor
-	OUTPUTS:
-		-LED grid
-			Patterns: Smile, sad face, quesion mark
-		-Servo motor
-			-Unlock, relock
-*/
-
-//START OF CODE
 #include <Servo.h>
 
 Servo servo;
@@ -118,7 +70,7 @@ void loop(){
     if((double)currentPulseDistance <= (double) (initialPulseDistance * 0.3)){
       userPresent = true;
     }
-    Serial.print("Knock code is: ");
+    Serial.print("Knock code is: "); //printing code at each poll for debugging
     for(int i=0; i<maxPatternSize; ++i){
       Serial.print(knockCode[i]);
       Serial.print(" ");
@@ -212,15 +164,16 @@ void readKnockPattern(unsigned long startTime){ //startTime used to determine ho
 
       if(checkPattern()){
         Serial.println("Correct pattern! :)");
-        ledSmileyFace(1000, custom_millis); //happy face for one second
+        ledSmileyFace(2000, custom_millis); //happy face for 2s
         
         unlockDoor();
+        Serial.println("Wait 5 seconds, then lock door again");
         delay(5000); //keep door unlocked for 5s, then lock again for security
         lockDoor();
         
       } else { //wrong pattern
         Serial.println("Incorrect pattern :(");
-        ledSadFace(1000, custom_millis); //sad face for one second
+        ledSadFace(2000, custom_millis); //sad face for 2s
       }
     } else {
       Serial.println("Timed out! No knocks detected.");
@@ -318,17 +271,23 @@ void setupBaseDistance(){
 void unlockDoor(){
 	//Use servo to unlock door
 	servo.writeMicroseconds(2300);
+  Serial.print("Door unlocked at ");
+  Serial.println(custom_millis);
 }
 
 void lockDoor(){
 	//Use servo to lock door
-	servo.writeMicroseconds(0);	
+	servo.writeMicroseconds(1000);
+  Serial.print("Door locked again at ");
+  Serial.println(custom_millis);
 }
 
 
 //LED MATRIX METHODS
 void ledSmileyFace(unsigned long duration, unsigned long startTime){
-  Serial.println(startTime);
+  Serial.print("Happy face for ");
+  Serial.print(duration);
+  Serial.println(" ms");
   while (custom_millis-startTime < duration){
 	  digitalWrite(LEDMatrixInputTwo, HIGH );
     digitalWrite(LEDMatrixOutputOne, LOW );
@@ -363,6 +322,9 @@ void ledSmileyFace(unsigned long duration, unsigned long startTime){
 }
 
 void ledSadFace(unsigned long duration, unsigned long startTime){
+  Serial.print("Sad face for ");
+  Serial.print(duration);
+  Serial.println(" ms");
   while(custom_millis-startTime < duration){
     digitalWrite(LEDMatrixInputTwo, HIGH );
     digitalWrite(LEDMatrixOutputOne, LOW );
